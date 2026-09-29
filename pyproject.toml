@@ -1,0 +1,16 @@
+[project]
+name = "email_to_calendar_scheduler"
+version = "0.1.0"
+description = "AI‑driven agent that reads Gmail and schedules events on Google Calendar."
+authors = [{name = "Arindam200"}]
+dependencies = [
+    "agno",
+    "google-auth",
+    "google-auth-oauthlib",
+    "google-api-python-client",
+    "python-dotenv",
+    "uv",  # optional, for fast installs
+]
+
+[tool.uv]
+# uv will manage the virtual env for you

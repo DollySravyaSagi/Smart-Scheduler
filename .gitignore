@@ -1,0 +1,28 @@
+# Environment & Secrets (NEVER COMMIT)
+.env
+credentials.json
+token.json
+
+# SQLite & Data Storage
+tmp/
+*.db
+*.sqlite
+*.sqlite3
+
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
