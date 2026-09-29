@@ -117,11 +117,16 @@ def get_assistant_team():
         from agno.tools.google.calendar import GoogleCalendarTools
         from agno.db.sqlite import SqliteDb
 
-        timezone = os.getenv("TIMEZONE", "Asia/Kolkata")
-        groq_api_key = os.getenv("GROQ_API_KEY")
-        gemini_api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-        openai_api_key = os.getenv("OPENAI_API_KEY")
-        nebius_api_key = os.getenv("NEBIUS_API_KEY")
+        def get_secret(key_name, default=None):
+            if hasattr(st, "secrets") and key_name in st.secrets:
+                return st.secrets[key_name]
+            return os.getenv(key_name, default)
+
+        timezone = get_secret("TIMEZONE", "Asia/Kolkata")
+        groq_api_key = get_secret("GROQ_API_KEY")
+        gemini_api_key = get_secret("GEMINI_API_KEY") or get_secret("GOOGLE_API_KEY")
+        openai_api_key = get_secret("OPENAI_API_KEY")
+        nebius_api_key = get_secret("NEBIUS_API_KEY")
 
         provider_name = "Unknown"
         if groq_api_key:
