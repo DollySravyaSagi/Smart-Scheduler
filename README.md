@@ -1,79 +1,99 @@
-# 🧠 Smart Scheduler Assistant
+# 🗓️ Smart Scheduler Assistant
 
-> An intelligent multi-agent AI web application that reads your Gmail, extracts schedule requests, and automatically manages your Google Calendar through an interactive dark-mode web dashboard.
-
----
-
-## 📊 Current Project Setup Status
-
-| Component | Status | Details |
-| :--- | :---: | :--- |
-| **Workspace & Files** | ✅ **Done** | All project files located in `d:\smart scheduler` |
-| **Python Environment** | ✅ **Done** | Python 3.13 configured with Streamlit |
-| **Web Dashboard UI** | ✅ **Done** | Streamlit web interface in `app.py` |
-| **Multi-LLM Engine** | ✅ **Done** | Connected to **Google Gemini** (`gemini-2.5-flash`) with Groq/OpenAI failover |
-| **Google Credentials** | ✅ **Done** | OAuth client secret (`credentials.json`) loaded |
-| **Authentication** | ✅ **Done** | Access token (`token.json`) generated |
-| **Deployability** | ✅ **Done** | Containerized with `Dockerfile` & `Procfile` |
+> An intelligent multi-agent AI app that reads your Gmail, extracts scheduling requests, and automatically manages your Google Calendar — all through a sleek dark-mode web dashboard.
 
 ---
 
-## 🚀 How to Run the Web Dashboard
+## ✨ Features
 
-Launch the interactive web application in your browser:
+- 📧 **Gmail Integration** — Reads and summarises your latest emails
+- 📅 **Google Calendar Management** — View, create, update, and delete events
+- 🤖 **Multi-Agent AI** — Powered by Groq, Google Gemini, or OpenAI (auto-detected)
+- 💬 **Chat Interface** — Natural language scheduling via an interactive AI assistant
+- ⚡ **Quick Prompts** — One-click shortcuts for common scheduling tasks
+- ☁️ **Cloud-Ready** — Deployed on Streamlit Community Cloud
 
-```powershell
+---
+
+## 🚀 Quick Start
+
+### 1. Install dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Configure environment
+Copy `.env.example` to `.env` and fill in your API key:
+```env
+GEMINI_API_KEY=your_key_here   # or GROQ_API_KEY / OPENAI_API_KEY
+TIMEZONE=Asia/Kolkata
+```
+
+### 3. Authenticate with Google
+```bash
+python authenticate.py
+```
+This opens a browser to authorise Gmail & Calendar access. A `token.json` file is saved automatically.
+
+### 4. Run the app
+```bash
 streamlit run app.py
 ```
-
-*The web dashboard will automatically open at `http://localhost:8501`.*
-
-### 🖥️ CLI Mode (Terminal)
-If you prefer the command-line interface:
-```powershell
-python main.py
-```
+Opens at `http://localhost:8501`.
 
 ---
 
-## 🌐 Deploying to Production
+## ☁️ Deploying to Streamlit Cloud
 
-### Option 1: Streamlit Community Cloud (Free & Instant)
-1. Push your repository to GitHub.
-2. Sign in to [share.streamlit.io](https://share.streamlit.io/).
-3. Connect your repository, set main file to `app.py`.
-4. Add your secrets (`GEMINI_API_KEY` or `GROQ_API_KEY`) under **Advanced Settings > Secrets**.
+1. Push this repo to GitHub.
+2. Go to [share.streamlit.io](https://share.streamlit.io/) → connect your repo → set main file to `app.py`.
+3. Add the following under **Settings → Secrets**:
 
-### Option 2: Docker Containerization
-Build and run locally or push to GCP Cloud Run / AWS ECS / Render:
+```toml
+GEMINI_API_KEY = "your_gemini_api_key"
+TIMEZONE = "Asia/Kolkata"
 
-```bash
-# Build the Docker image
-docker build -t smart-scheduler .
-
-# Run the container
-docker run -p 8501:8501 --env-file .env smart-scheduler
+CREDENTIALS_JSON = '''{ ...contents of credentials.json... }'''
+TOKEN_JSON = '''{ ...contents of token.json... }'''
 ```
 
-### Option 3: Render / Cloud Web Services
-- Build Command: `pip install -r pyproject.toml`
-- Start Command: `streamlit run app.py --server.port=$PORT --server.address=0.0.0.0`
+> **Note:** Regenerate `token.json` by running `python authenticate.py` locally whenever the token expires, then update `TOKEN_JSON` in Streamlit Secrets.
 
 ---
 
 ## 📂 Project Structure
 
-```text
-d:\smart scheduler/
-├── .streamlit/
-│   └── config.toml        # Dark mode styling and server options
-├── app.py                 # Streamlit Web Application UI & Dashboard
-├── main.py                # Core multi-agent assistant logic (CLI mode)
-├── authenticate.py        # Google OAuth authorization script
-├── Dockerfile             # Multi-stage production container manifest
-├── Procfile               # Cloud deployment process file (Render/Heroku)
-├── credentials.json       # Google OAuth client secret
-├── token.json             # Google OAuth access token
-├── .env                   # Environment variables (GEMINI_API_KEY, TIMEZONE)
-└── README.md              # Project documentation and deployment guide
 ```
+smart-scheduler/
+├── .streamlit/
+│   └── config.toml        # Theme and server settings
+├── app.py                 # Streamlit web app (UI + agent wiring)
+├── main.py                # CLI mode entry point
+├── authenticate.py        # One-time Google OAuth setup script
+├── credentials.json       # Google OAuth client secret (keep private)
+├── token.json             # Google OAuth access token (keep private)
+├── requirements.txt       # Python dependencies
+├── Dockerfile             # Container build manifest
+├── Procfile               # Process file for cloud deployment
+└── .env                   # Local environment variables
+```
+
+---
+
+## 🔑 Supported LLM Providers
+
+The app auto-selects a provider based on which API key is present (in priority order):
+
+| Priority | Provider | Environment Variable | Model Used |
+|:---:|---|---|---|
+| 1 | **Groq** | `GROQ_API_KEY` | `llama-3.3-70b-versatile` |
+| 2 | **Google Gemini** | `GEMINI_API_KEY` | `gemini-2.0-flash` |
+| 3 | **OpenAI** | `OPENAI_API_KEY` | `gpt-4o-mini` |
+
+---
+
+## 🔒 Security Notes
+
+- `credentials.json` and `token.json` are listed in `.gitignore` — never commit them.
+- Store all secrets in Streamlit Cloud's **Secrets** manager, not in the repository.
+- Keep your Google Cloud OAuth app in **Testing** mode and add authorised test users, or publish it to production to remove the 7-day token expiry.

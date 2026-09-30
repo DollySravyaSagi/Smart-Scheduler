@@ -2,7 +2,6 @@ import streamlit as st
 import os
 import sys
 import json
-import dotenv
 from dotenv import load_dotenv
 
 # Page Configuration - MUST be first Streamlit command
@@ -13,17 +12,15 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for modern dark obsidian & emerald/gold aesthetic (No blue shades)
+# Custom CSS — Charcoal Obsidian & Emerald/Gold aesthetic
 st.markdown("""
 <style>
-    /* Global Styles */
     .stApp {
         background: linear-gradient(135deg, #090d16 0%, #111827 100%);
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         color: #f8fafc;
     }
-    
-    /* Header Banner */
+
     .main-header {
         background: rgba(255, 255, 255, 0.02);
         backdrop-filter: blur(12px);
@@ -35,7 +32,7 @@ st.markdown("""
         align-items: center;
         justify-content: space-between;
     }
-    
+
     .main-title {
         font-size: 1.8rem;
         font-weight: 700;
@@ -44,14 +41,13 @@ st.markdown("""
         -webkit-text-fill-color: transparent;
         margin: 0;
     }
-    
+
     .subtitle {
         color: #94a3b8;
         font-size: 0.92rem;
         margin-top: 4px;
     }
-    
-    /* Status Badges */
+
     .badge {
         display: inline-flex;
         align-items: center;
@@ -61,20 +57,19 @@ st.markdown("""
         font-weight: 600;
         margin-left: 8px;
     }
-    
+
     .badge-emerald {
         background: rgba(16, 185, 129, 0.15);
         color: #34d399;
         border: 1px solid rgba(16, 185, 129, 0.3);
     }
-    
+
     .badge-amber {
         background: rgba(245, 158, 11, 0.15);
         color: #fbbf24;
         border: 1px solid rgba(245, 158, 11, 0.3);
     }
-    
-    /* Card Container */
+
     .custom-card {
         background: rgba(255, 255, 255, 0.03);
         border: 1px solid rgba(255, 255, 255, 0.07);
@@ -83,19 +78,17 @@ st.markdown("""
         margin-bottom: 16px;
         transition: transform 0.2s, border-color 0.2s;
     }
-    
+
     .custom-card:hover {
         border-color: rgba(16, 185, 129, 0.4);
         transform: translateY(-2px);
     }
 
-    /* Sidebar Customization */
     section[data-testid="stSidebar"] {
         background: #0d131f;
         border-right: 1px solid rgba(255, 255, 255, 0.05);
     }
 
-    /* Primary Buttons & Interactive Elements */
     .stButton>button {
         border-radius: 10px;
         border: 1px solid rgba(255, 255, 255, 0.08);
@@ -107,7 +100,6 @@ st.markdown("""
         color: #34d399;
     }
 
-    /* Hide Streamlit branding header/footer for cleaner UI */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 </style>
@@ -121,30 +113,19 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CREDS_PATH = os.path.join(SCRIPT_DIR, "credentials.json")
 TOKEN_PATH = os.path.join(SCRIPT_DIR, "token.json")
 
+
 def sync_google_credentials():
-    """Restores credentials.json and token.json from st.secrets if missing on disk (e.g. Streamlit Cloud)."""
+    """Restore credentials.json and token.json from st.secrets when running on Streamlit Cloud."""
     try:
         if not os.path.exists(CREDS_PATH):
-            creds_val = None
-            if hasattr(st, "secrets"):
-                if "CREDENTIALS_JSON" in st.secrets:
-                    creds_val = st.secrets["CREDENTIALS_JSON"]
-                elif "credentials_json" in st.secrets:
-                    creds_val = st.secrets["credentials_json"]
-            
+            creds_val = st.secrets.get("CREDENTIALS_JSON") or st.secrets.get("credentials_json")
             if creds_val:
                 content = creds_val if isinstance(creds_val, str) else json.dumps(dict(creds_val))
                 with open(CREDS_PATH, "w", encoding="utf-8") as f:
                     f.write(content)
 
         if not os.path.exists(TOKEN_PATH):
-            token_val = None
-            if hasattr(st, "secrets"):
-                if "TOKEN_JSON" in st.secrets:
-                    token_val = st.secrets["TOKEN_JSON"]
-                elif "token_json" in st.secrets:
-                    token_val = st.secrets["token_json"]
-            
+            token_val = st.secrets.get("TOKEN_JSON") or st.secrets.get("token_json")
             if token_val:
                 content = token_val if isinstance(token_val, str) else json.dumps(dict(token_val))
                 with open(TOKEN_PATH, "w", encoding="utf-8") as f:
@@ -152,9 +133,28 @@ def sync_google_credentials():
     except Exception:
         pass
 
-sync_google_credentials()
 
-# Helper function to initialize agent dynamically
+def refresh_google_token():
+    """Silently refresh an expired Google OAuth token to avoid browser-launch errors on headless servers."""
+    try:
+        if not os.path.exists(TOKEN_PATH):
+            return
+        from google.oauth2.credentials import Credentials
+        from google.auth.transport.requests import Request
+
+        creds = Credentials.from_authorized_user_file(TOKEN_PATH)
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+            with open(TOKEN_PATH, "w", encoding="utf-8") as f:
+                f.write(creds.to_json())
+    except Exception:
+        pass
+
+
+sync_google_credentials()
+refresh_google_token()
+
+
 @st.cache_resource(show_spinner=False)
 def get_assistant_team():
     try:
@@ -164,38 +164,31 @@ def get_assistant_team():
         from agno.tools.google.calendar import GoogleCalendarTools
         from agno.db.sqlite import SqliteDb
 
-        def get_secret(key_name, default=None):
-            if hasattr(st, "secrets") and key_name in st.secrets:
-                return st.secrets[key_name]
-            return os.getenv(key_name, default)
+        def get_secret(key, default=None):
+            if hasattr(st, "secrets") and key in st.secrets:
+                return st.secrets[key]
+            return os.getenv(key, default)
 
         timezone = get_secret("TIMEZONE", "Asia/Kolkata")
         groq_api_key = get_secret("GROQ_API_KEY")
         gemini_api_key = get_secret("GEMINI_API_KEY") or get_secret("GOOGLE_API_KEY")
         openai_api_key = get_secret("OPENAI_API_KEY")
-        nebius_api_key = get_secret("NEBIUS_API_KEY")
 
-        provider_name = "Unknown"
         if groq_api_key:
             from agno.models.groq import Groq
             model = Groq(id="llama-3.3-70b-versatile", api_key=groq_api_key)
-            provider_name = "Groq"
+            provider_name = "Groq (llama-3.3-70b-versatile)"
         elif gemini_api_key:
             from agno.models.google import Gemini
-            model_id = get_secret("GEMINI_MODEL", "gemini-3.5-flash")
+            model_id = get_secret("GEMINI_MODEL", "gemini-2.0-flash")
             model = Gemini(id=model_id, api_key=gemini_api_key)
             provider_name = f"Google Gemini ({model_id})"
-
         elif openai_api_key:
             from agno.models.openai import OpenAIChat
             model = OpenAIChat(id="gpt-4o-mini", api_key=openai_api_key)
-            provider_name = "OpenAI"
-        elif nebius_api_key:
-            from agno.models.nebius import Nebius
-            model = Nebius(id="Qwen/Qwen3-32b", api_key=nebius_api_key)
-            provider_name = "Nebius"
+            provider_name = "OpenAI (gpt-4o-mini)"
         else:
-            return None, "No API key found in environment secrets."
+            return None, "No API key found. Set GEMINI_API_KEY, GROQ_API_KEY, or OPENAI_API_KEY in secrets."
 
         DB_PATH = os.getenv("DB_PATH", os.path.join(SCRIPT_DIR, "tmp", "data.db"))
         os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
@@ -208,9 +201,9 @@ def get_assistant_team():
             description="Gmail reading specialist.",
             instructions=[
                 "Use tools to search and read emails from Gmail.",
-                "Limit email searches/fetches to a maximum of 3-5 latest emails to remain fast.",
-                "Focus on extracting key details such as sender, subject, and concise summary of the body.",
-                "Never fabricate email content; only use the available information.",
+                "Limit email searches/fetches to a maximum of 5 latest emails.",
+                "Focus on sender, subject, and a concise body summary.",
+                "Never fabricate email content.",
                 "If no emails are found, respond with 'No emails found.'",
             ],
             db=db,
@@ -224,12 +217,11 @@ def get_assistant_team():
             tools=[GoogleCalendarTools(credentials_path=CREDS_PATH, token_path=TOKEN_PATH)],
             instructions=[
                 f"""You are a scheduling assistant. Help users:
-                - get scheduled events from a certain date/time
-                - create events based on details
-                - update existing events
-                - delete events
-                - find available time slots
-                - all times in {timezone}"""
+                - View scheduled events for a given date/time
+                - Create new events
+                - Update or delete existing events
+                - Find available time slots
+                - All times are in {timezone}"""
             ],
             add_datetime_to_context=True,
             db=db,
@@ -240,13 +232,13 @@ def get_assistant_team():
         team = Team(
             name="Productivity Team",
             members=[email_agent, calendar_agent],
-            description="Team to manage Gmail & Google Calendar.",
+            description="Manages Gmail & Google Calendar.",
             model=model,
             instructions=[
-                "Analyze user requests:",
-                "- If directly about Google Calendar, delegate to calendar_agent.",
-                "- If about emails or converting emails into events, use email_agent then calendar_agent.",
-                "Ensure all necessary event details (name, date, time) are provided.",
+                "Analyze the user's request:",
+                "- Calendar-related requests → delegate to calendar_agent.",
+                "- Email-to-event requests → use email_agent first, then calendar_agent.",
+                "Ensure event details (name, date, time) are complete before creating events.",
             ],
             db=db,
             add_history_to_context=True,
@@ -257,7 +249,8 @@ def get_assistant_team():
     except Exception as e:
         return (None, None), str(e)
 
-# Sidebar - Clean, User-Centric Controls
+
+# Sidebar
 with st.sidebar:
     st.markdown("### ⚡ Quick Prompts")
     st.caption("Click any shortcut to ask the assistant:")
@@ -282,15 +275,16 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("<div style='text-align: center; color: #64748b; font-size: 0.8rem;'>✨ Smart Scheduler Assistant</div>", unsafe_allow_html=True)
 
+
 (assistant_data, err) = get_assistant_team()
 team = assistant_data[0] if assistant_data else None
 
-# Main Application Layout
+# Header
 st.markdown("""
 <div class="main-header">
     <div>
         <h1 class="main-title">🗓️ Smart Scheduler</h1>
-        <p class="subtitle">AI-powered Gmail reader & Google Calendar automated scheduling assistant</p>
+        <p class="subtitle">AI-powered Gmail reader & Google Calendar scheduling assistant</p>
     </div>
     <div>
         <span class="badge badge-emerald">● Ready</span>
@@ -299,87 +293,77 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Application Tabs
+# Tabs
 tab_chat, tab_calendar, tab_emails = st.tabs(["💬 AI Assistant", "📅 Calendar Explorer", "📧 Inbox Explorer"])
 
-# Initialize session state for chat messages
 if "messages" not in st.session_state:
     st.session_state["messages"] = [
-        {"role": "assistant", "content": "Hello! 👋 I am your Smart Scheduler Assistant. I can read your Gmail messages, summarize important updates, check your Google Calendar, and schedule events for you. How can I assist you today?"}
+        {"role": "assistant", "content": "Hello! 👋 I'm your Smart Scheduler Assistant. I can read your Gmail, check your Google Calendar, and schedule events for you. How can I help?"}
     ]
 
-# TAB 1: Chat Assistant
+# TAB 1: Chat
 with tab_chat:
-    # Render chat history
     for msg in st.session_state["messages"]:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-    # Check for quick prompt selection from sidebar
-    prompt_input = st.chat_input("Type your request (e.g. 'Read latest emails' or 'Schedule meeting tomorrow at 3 PM')...")
-    
+    prompt_input = st.chat_input("e.g. 'Read latest emails' or 'Schedule meeting tomorrow at 3 PM'...")
+
     if "pending_prompt" in st.session_state and st.session_state["pending_prompt"]:
-        prompt_input = st.session_state["pending_prompt"]
-        st.session_state["pending_prompt"] = None
+        prompt_input = st.session_state.pop("pending_prompt")
 
     if prompt_input:
-        # User message
         st.session_state["messages"].append({"role": "user", "content": prompt_input})
         with st.chat_message("user"):
             st.markdown(prompt_input)
 
-        # Assistant response
         with st.chat_message("assistant"):
             if team is None:
-                st.error("Assistant service is initializing or credentials need verification.")
+                st.error(f"Assistant could not initialize: {err}")
             else:
-                with st.spinner("🤖 Processing request with Gmail & Calendar agents..."):
+                with st.spinner("🤖 Processing with Gmail & Calendar agents..."):
                     try:
                         run_response = team.run(prompt_input)
                         response_text = run_response.content if hasattr(run_response, 'content') else str(run_response)
                         st.markdown(response_text)
                         st.session_state["messages"].append({"role": "assistant", "content": response_text})
                     except Exception as e:
-                        error_msg = f"❌ Error executing request: {e}"
+                        error_msg = f"❌ Error: {e}"
                         st.error(error_msg)
                         st.session_state["messages"].append({"role": "assistant", "content": error_msg})
 
 # TAB 2: Calendar Explorer
 with tab_calendar:
     st.markdown("### 📅 Live Google Calendar Scanner")
-    st.write("Scan your upcoming schedule directly with one click.")
-    
-    col_cal_1, col_cal_2 = st.columns([1, 4])
-    with col_cal_1:
-        fetch_cal = st.button("🔄 Fetch Today's Events", key="btn_fetch_cal", use_container_width=True)
-    
-    if fetch_cal:
-        if team:
-            with st.spinner("Fetching Google Calendar events..."):
-                try:
-                    cal_res = team.run("List all scheduled calendar events for today with start time, end time, and event title.")
-                    st.markdown(cal_res.content if hasattr(cal_res, 'content') else str(cal_res))
-                except Exception as e:
-                    st.error(f"Failed to fetch calendar: {e}")
-        else:
-            st.warning("Please check system authentication.")
+    st.write("Fetch your upcoming schedule with one click.")
+
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        if st.button("🔄 Fetch Today's Events", key="btn_fetch_cal", use_container_width=True):
+            if team:
+                with st.spinner("Fetching Google Calendar events..."):
+                    try:
+                        cal_res = team.run("List all calendar events for today with start time, end time, and title.")
+                        st.markdown(cal_res.content if hasattr(cal_res, 'content') else str(cal_res))
+                    except Exception as e:
+                        st.error(f"Failed to fetch calendar: {e}")
+            else:
+                st.warning(f"Assistant unavailable: {err}")
 
 # TAB 3: Inbox Explorer
 with tab_emails:
     st.markdown("### 📧 Live Gmail Scanner")
-    st.write("Fetch recent emails and identify potential scheduling requests.")
-    
-    col_em_1, col_em_2 = st.columns([1, 4])
-    with col_em_1:
-        fetch_em = st.button("🔄 Fetch Latest Emails", key="btn_fetch_emails", use_container_width=True)
-        
-    if fetch_em:
-        if team:
-            with st.spinner("Reading latest 5 Gmail messages..."):
-                try:
-                    em_res = team.run("Search and read the latest 5 emails in Gmail. Display sender, date/time, subject, and a brief summary.")
-                    st.markdown(em_res.content if hasattr(em_res, 'content') else str(em_res))
-                except Exception as e:
-                    st.error(f"Failed to read emails: {e}")
-        else:
-            st.warning("Please check system authentication.")
+    st.write("Fetch recent emails and identify scheduling requests.")
+
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        if st.button("🔄 Fetch Latest Emails", key="btn_fetch_emails", use_container_width=True):
+            if team:
+                with st.spinner("Reading latest Gmail messages..."):
+                    try:
+                        em_res = team.run("Read the latest 5 emails. Show sender, date, subject, and a brief summary.")
+                        st.markdown(em_res.content if hasattr(em_res, 'content') else str(em_res))
+                    except Exception as e:
+                        st.error(f"Failed to read emails: {e}")
+            else:
+                st.warning(f"Assistant unavailable: {err}")
