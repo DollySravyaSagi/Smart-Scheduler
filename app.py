@@ -182,9 +182,10 @@ def get_assistant_team():
             provider_name = "Groq"
         elif gemini_api_key:
             from agno.models.google import Gemini
-            model_id = get_secret("GEMINI_MODEL", "gemini-3.8-flash")
+            model_id = get_secret("GEMINI_MODEL", "gemini-3.5-flash")
             model = Gemini(id=model_id, api_key=gemini_api_key)
             provider_name = f"Google Gemini ({model_id})"
+
         elif openai_api_key:
             from agno.models.openai import OpenAIChat
             model = OpenAIChat(id="gpt-4o-mini", api_key=openai_api_key)
