@@ -103,9 +103,44 @@ load_dotenv()
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 
+import json
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CREDS_PATH = os.path.join(SCRIPT_DIR, "credentials.json")
 TOKEN_PATH = os.path.join(SCRIPT_DIR, "token.json")
+
+def sync_google_credentials():
+    """Restores credentials.json and token.json from st.secrets if missing on disk (e.g. Streamlit Cloud)."""
+    try:
+        if not os.path.exists(CREDS_PATH):
+            creds_val = None
+            if hasattr(st, "secrets"):
+                if "CREDENTIALS_JSON" in st.secrets:
+                    creds_val = st.secrets["CREDENTIALS_JSON"]
+                elif "credentials_json" in st.secrets:
+                    creds_val = st.secrets["credentials_json"]
+            
+            if creds_val:
+                content = creds_val if isinstance(creds_val, str) else json.dumps(dict(creds_val))
+                with open(CREDS_PATH, "w", encoding="utf-8") as f:
+                    f.write(content)
+
+        if not os.path.exists(TOKEN_PATH):
+            token_val = None
+            if hasattr(st, "secrets"):
+                if "TOKEN_JSON" in st.secrets:
+                    token_val = st.secrets["TOKEN_JSON"]
+                elif "token_json" in st.secrets:
+                    token_val = st.secrets["token_json"]
+            
+            if token_val:
+                content = token_val if isinstance(token_val, str) else json.dumps(dict(token_val))
+                with open(TOKEN_PATH, "w", encoding="utf-8") as f:
+                    f.write(content)
+    except Exception as e:
+        pass
+
+sync_google_credentials()
 
 # Helper function to initialize agent dynamically
 @st.cache_resource(show_spinner=False)
