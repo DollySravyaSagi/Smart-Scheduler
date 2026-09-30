@@ -29,8 +29,9 @@ if groq_api_key:
     print("🤖 LLM Provider: Groq (llama-3.3-70b-versatile)")
 elif gemini_api_key:
     from agno.models.google import Gemini
-    model = Gemini(id="gemini-2.5-flash", api_key=gemini_api_key)
-    print("🤖 LLM Provider: Google Gemini (gemini-2.5-flash)")
+    model_id = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+    model = Gemini(id=model_id, api_key=gemini_api_key)
+    print(f"🤖 LLM Provider: Google Gemini ({model_id})")
 elif openai_api_key:
     from agno.models.openai import OpenAIChat
     model = OpenAIChat(id="gpt-4o-mini", api_key=openai_api_key)
