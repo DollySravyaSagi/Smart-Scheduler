@@ -1,6 +1,7 @@
 streamlit
 agno
-sqlalchemy
+sqlalchemy[asyncio]
+greenlet
 google-auth
 google-auth-oauthlib
 google-api-python-client
