@@ -1,33 +1,35 @@
 import streamlit as st
 import os
 import sys
+import json
 import dotenv
 from dotenv import load_dotenv
 
 # Page Configuration - MUST be first Streamlit command
 st.set_page_config(
     page_title="Smart Scheduler Assistant",
-    page_icon="🧠",
+    page_icon="🗓️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for modern dark-mode aesthetic
+# Custom CSS for modern dark obsidian & emerald/gold aesthetic (No blue shades)
 st.markdown("""
 <style>
     /* Global Styles */
     .stApp {
-        background: linear-gradient(135deg, #0e1117 0%, #161b22 100%);
+        background: linear-gradient(135deg, #090d16 0%, #111827 100%);
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        color: #f8fafc;
     }
     
     /* Header Banner */
     .main-header {
-        background: rgba(255, 255, 255, 0.03);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.02);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.06);
         border-radius: 16px;
-        padding: 24px 32px;
+        padding: 22px 30px;
         margin-bottom: 24px;
         display: flex;
         align-items: center;
@@ -35,17 +37,17 @@ st.markdown("""
     }
     
     .main-title {
-        font-size: 1.85rem;
+        font-size: 1.8rem;
         font-weight: 700;
-        background: linear-gradient(90deg, #818cf8, #c084fc);
+        background: linear-gradient(90deg, #34d399, #f59e0b);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         margin: 0;
     }
     
     .subtitle {
-        color: #9ca3af;
-        font-size: 0.95rem;
+        color: #94a3b8;
+        font-size: 0.92rem;
         margin-top: 4px;
     }
     
@@ -57,19 +59,19 @@ st.markdown("""
         border-radius: 9999px;
         font-size: 0.82rem;
         font-weight: 600;
-        margin-right: 8px;
+        margin-left: 8px;
     }
     
-    .badge-success {
-        background: rgba(34, 197, 94, 0.15);
-        color: #4ade80;
-        border: 1px solid rgba(34, 197, 94, 0.3);
+    .badge-emerald {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+        border: 1px solid rgba(16, 185, 129, 0.3);
     }
     
-    .badge-info {
-        background: rgba(99, 102, 241, 0.15);
-        color: #818cf8;
-        border: 1px solid rgba(99, 102, 241, 0.3);
+    .badge-amber {
+        background: rgba(245, 158, 11, 0.15);
+        color: #fbbf24;
+        border: 1px solid rgba(245, 158, 11, 0.3);
     }
     
     /* Card Container */
@@ -83,27 +85,37 @@ st.markdown("""
     }
     
     .custom-card:hover {
-        border-color: rgba(99, 102, 241, 0.4);
+        border-color: rgba(16, 185, 129, 0.4);
         transform: translateY(-2px);
     }
 
     /* Sidebar Customization */
     section[data-testid="stSidebar"] {
-        background: #11151c;
-        border-right: 1px solid rgba(255, 255, 255, 0.06);
+        background: #0d131f;
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* Primary Buttons & Interactive Elements */
+    .stButton>button {
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        transition: all 0.2s ease-in-out;
+    }
+
+    .stButton>button:hover {
+        border-color: #10b981;
+        color: #34d399;
     }
 
     /* Hide Streamlit branding header/footer for cleaner UI */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 </style>
-""", unsafe_allow_html=unsafe_allow_html if 'unsafe_allow_html' in locals() else True)
+""", unsafe_allow_html=True)
 
 load_dotenv()
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
-
-import json
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CREDS_PATH = os.path.join(SCRIPT_DIR, "credentials.json")
@@ -137,7 +149,7 @@ def sync_google_credentials():
                 content = token_val if isinstance(token_val, str) else json.dumps(dict(token_val))
                 with open(TOKEN_PATH, "w", encoding="utf-8") as f:
                     f.write(content)
-    except Exception as e:
+    except Exception:
         pass
 
 sync_google_credentials()
@@ -167,21 +179,21 @@ def get_assistant_team():
         if groq_api_key:
             from agno.models.groq import Groq
             model = Groq(id="llama-3.3-70b-versatile", api_key=groq_api_key)
-            provider_name = "Groq (llama-3.3-70b-versatile)"
+            provider_name = "Groq"
         elif gemini_api_key:
             from agno.models.google import Gemini
             model = Gemini(id="gemini-2.5-flash", api_key=gemini_api_key)
-            provider_name = "Google Gemini (gemini-2.5-flash)"
+            provider_name = "Google Gemini"
         elif openai_api_key:
             from agno.models.openai import OpenAIChat
             model = OpenAIChat(id="gpt-4o-mini", api_key=openai_api_key)
-            provider_name = "OpenAI (gpt-4o-mini)"
+            provider_name = "OpenAI"
         elif nebius_api_key:
             from agno.models.nebius import Nebius
             model = Nebius(id="Qwen/Qwen3-32b", api_key=nebius_api_key)
-            provider_name = "Nebius (Qwen3-32b)"
+            provider_name = "Nebius"
         else:
-            return None, "No API key found in environment."
+            return None, "No API key found in environment secrets."
 
         DB_PATH = os.getenv("DB_PATH", os.path.join(SCRIPT_DIR, "tmp", "data.db"))
         os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
@@ -243,33 +255,10 @@ def get_assistant_team():
     except Exception as e:
         return (None, None), str(e)
 
-# Sidebar Header & Status
+# Sidebar - Clean, User-Centric Controls
 with st.sidebar:
-    st.markdown("### ⚙️ System Status")
-    
-    creds_exist = os.path.exists(CREDS_PATH)
-    token_exist = os.path.exists(TOKEN_PATH)
-    
-    if creds_exist and token_exist:
-        st.success("Google OAuth Credentials: **Connected** ✅")
-    else:
-        st.error("Google OAuth: **Missing Credentials** ❌")
-        if not creds_exist:
-            st.caption("⚠️ `credentials.json` not found.")
-        if not token_exist:
-            st.caption("⚠️ `token.json` missing. Run `python authenticate.py`.")
-
-    (assistant_data, err) = get_assistant_team()
-    team = None
-    if assistant_data and assistant_data[0]:
-        team, provider = assistant_data
-        st.info(f"LLM Engine: **{provider}**")
-    else:
-        st.error(f"LLM Error: {err}")
-
-    st.markdown("---")
-    st.markdown("### ⚡ Quick Actions")
-    st.caption("Click any prompt to ask the AI assistant:")
+    st.markdown("### ⚡ Quick Prompts")
+    st.caption("Click any shortcut to ask the assistant:")
 
     quick_prompts = [
         "Read my latest 3 emails and summarize key info.",
@@ -283,20 +272,27 @@ with st.sidebar:
             st.session_state["pending_prompt"] = qp
 
     st.markdown("---")
+    st.markdown("### 🛠️ Options")
     if st.button("🗑️ Clear Chat History", use_container_width=True):
         st.session_state["messages"] = []
         st.rerun()
+
+    st.markdown("---")
+    st.markdown("<div style='text-align: center; color: #64748b; font-size: 0.8rem;'>✨ Smart Scheduler Assistant</div>", unsafe_allow_html=True)
+
+(assistant_data, err) = get_assistant_team()
+team = assistant_data[0] if assistant_data else None
 
 # Main Application Layout
 st.markdown("""
 <div class="main-header">
     <div>
-        <h1 class="main-title">🧠 Smart Scheduler Assistant</h1>
+        <h1 class="main-title">🗓️ Smart Scheduler</h1>
         <p class="subtitle">AI-powered Gmail reader & Google Calendar automated scheduling assistant</p>
     </div>
     <div>
-        <span class="badge badge-success">● Active</span>
-        <span class="badge badge-info">Multi-Agent System</span>
+        <span class="badge badge-emerald">● Ready</span>
+        <span class="badge badge-amber">AI Active</span>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -333,7 +329,7 @@ with tab_chat:
         # Assistant response
         with st.chat_message("assistant"):
             if team is None:
-                st.error("Assistant engine is not configured properly. Check system status in the sidebar.")
+                st.error("Assistant service is initializing or credentials need verification.")
             else:
                 with st.spinner("🤖 Processing request with Gmail & Calendar agents..."):
                     try:
@@ -364,7 +360,7 @@ with tab_calendar:
                 except Exception as e:
                     st.error(f"Failed to fetch calendar: {e}")
         else:
-            st.warning("Please check system authentication in sidebar.")
+            st.warning("Please check system authentication.")
 
 # TAB 3: Inbox Explorer
 with tab_emails:
@@ -384,4 +380,4 @@ with tab_emails:
                 except Exception as e:
                     st.error(f"Failed to read emails: {e}")
         else:
-            st.warning("Please check system authentication in sidebar.")
+            st.warning("Please check system authentication.")
