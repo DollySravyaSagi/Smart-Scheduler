@@ -87,7 +87,7 @@ The app auto-selects a provider based on which API key is present (in priority o
 | Priority | Provider | Environment Variable | Model Used |
 |:---:|---|---|---|
 | 1 | **Groq** | `GROQ_API_KEY` | `llama-3.3-70b-versatile` |
-| 2 | **Google Gemini** | `GEMINI_API_KEY` | `gemini-2.0-flash` |
+| 2 | **Google Gemini** | `GEMINI_API_KEY` | `gemini-3.8-flash` |
 | 3 | **OpenAI** | `OPENAI_API_KEY` | `gpt-4o-mini` |
 
 ---
